@@ -55,7 +55,7 @@ app.post("/register", async (request, response) => {
       response.status(400);
       response.send("Password is too short");
     } else {
-      response.status = 400;
+      response.status (400);
       response.send("User already exists");
     }
   }
