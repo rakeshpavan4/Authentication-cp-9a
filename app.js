@@ -44,44 +44,48 @@ app.post("/register", async (request, response) => {
           '${hashedPassword}', 
           '${gender}',
           '${location}'
-        )`;
-    //const dbResponse =
-    await database.run(createUserQuery);
-    //const newUserId = dbResponse.lastID;
-    response.send("User created successfully");
-  } else {
-    const passwordLength = password.length;
-    if (passwordLength < 5) {
+        );`;
+    if (password.length < 5) {
       response.status(400);
       response.send("Password is too short");
     } else {
-      response.status (400);
-      response.send("User already exists");
+      await database.run(createUserQuery);
+      response.status(200);
+      response.send("User created successfully");
     }
+  } else {
+    response.status(400);
+    response.send("User already exists");
   }
 });
 app.post("/login", async (request, response) => {
-  const { username, password } = request.body;
-  const selectUserQuery = `SELECT * FROM user WHERE username = '${username}'`;
-  const dbUser = await database.get(selectUserQuery);
-  if (dbUser === undefined) {
-    response.status(400);
-    response.send("Invalid User");
-  } else {
-    const isPasswordMatched = await bcrypt.compare(password, dbUser.password);
-    if (isPasswordMatched === true) {
-      response.send("Login Success!");
-    } else {
+  try {
+    const { username, password } = request.body;
+    const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
+    const dbUser = await database.get(selectUserQuery);
+    if (dbUser === undefined) {
       response.status(400);
-      response.send("Invalid Password");
+      response.send("Invalid User");
+    } else {
+      const isPasswordMatched = await bcrypt.compare(password, dbUser.password);
+      if (isPasswordMatched === true) {
+        response.status(200);
+        response.send("Login Success!");
+      } else {
+        response.status(400);
+        response.send("Invalid Password");
+      }
     }
+  } catch (error) {
+    console.log(`DB Error: ${error.message}`);
+    process.exit(1);
   }
 });
 //API password change
 
 app.put("/change-password", async (request, response) => {
   const { username, oldPassword, newPassword } = request.body;
-  const selectUserQuery = `SELECT * FROM user WHERE username='${username}';`;
+  const selectUserQuery = `SELECT * FROM user WHERE username='${username}'`;
   const dbUser = await database.get(selectUserQuery);
   if (dbUser === undefined) {
     response.status(400);
@@ -89,7 +93,8 @@ app.put("/change-password", async (request, response) => {
   } else {
     const isPasswordMatched = await bcrypt.compare(
       oldPassword,
-      dbUser.password );
+      dbUser.password
+    );
     if (isPasswordMatched === true) {
       const passwordLength = newPassword.length;
       if (passwordLength < 5) {
@@ -99,8 +104,8 @@ app.put("/change-password", async (request, response) => {
         const encryptedNewPassword = await bcrypt.hash(newPassword, 10);
         const updatePassword = `
         UPDATE user
-        SET password='${encryptedNewPassword},
-        WHERE username= '${username}';`;
+        SET password='${encryptedNewPassword}'
+        WHERE username= '${username}'`;
         await database.run(updatePassword);
         response.status(200);
         response.send("Password updated");
@@ -111,5 +116,5 @@ app.put("/change-password", async (request, response) => {
     }
   }
 });
-
 module.exports = app;
+
